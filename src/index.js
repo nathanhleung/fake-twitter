@@ -12,9 +12,12 @@ const server = http.createServer((req, res) => {
         case '/': {
             if (method === GET) {
                 routes.index(req, res);
+                routes.readTweet(req, res);
                 break;
             } else if (method === POST) {
                 routes.postTweet(req, res);
+                routes.index(req, res);
+                routes.readTweet(req, res);
                 break;
             }
         }

@@ -26,6 +26,9 @@ module.exports = {
     getUserById(id) {
         return db.users.find(u => u.id === id);
     },
+    getUserByUsername(username) {
+        return db.users.find(u => u.username === username);
+    },
     getTweetById(id) {
         return db.tweets.find(t => t.id === id);
     },
@@ -34,6 +37,13 @@ module.exports = {
             throw new Error('Not a Tweet');
         }
         db.tweets.push(tweet);
+    },
+    insertUser(user) {
+        if (!(user instanceof User)) {
+            throw new Error("Not a User");
+        }
+
+        db.users.push(user);
     },
     getTweets() {
         return db.tweets;
