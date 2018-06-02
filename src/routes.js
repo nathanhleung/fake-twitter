@@ -1,87 +1,146 @@
 const fs = require('fs');
+const querystring = require('querystring');
 const path = require('path');
+const url = require('url');
 const { CLIENT_ROOT } = require('./constants');
 const db = require('./db');
-const { Tweet, User } = db;
+const { Tweet, User, Like, Reply } = db;
 
-var self = {
+function readBody(req, res) {
+    return new Promise((resolve, reject) => {
+        let rawBody = [];
+        req.on('error', (err) => {
+            return reject(err);
+        }).on('data', (chunk) => {
+            rawBody.push(chunk);
+        }).on('end', () => {
+            rawBody = Buffer.concat(rawBody).toString();
+            const body = querystring.parse(rawBody);
+            return resolve(body);
+        });
+    });
+}
+
+module.exports = {
     index: (req, res) => {
         res.statusCode = 200;
         res.setHeader("Content-Type", "text/html");
         fs.readFile(path.join(CLIENT_ROOT, 'index.html'), (err, data) => {
-            //self.readTweet(req, res);   
+            res.end(data);
+        });
+    },
+    indexJS: (req, res) => {
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/javascript");
+        fs.readFile(path.join(CLIENT_ROOT, 'index.js'), (err, data) => {
+            res.end(data);
+        });
+    },
+    indexCSS: (req, res) => {
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "text/css");
+        fs.readFile(path.join(CLIENT_ROOT, 'index.css'), (err, data) => {
             res.end(data);
         });
     },
     postTweet: (req, res) => {
-        let body = [];
-        req.on('error', (err) => {
-            console.error(err);
-        }).on('data', (chunk) => {
-            body.push(chunk);
-        }).on('end', () => {
-            body = Buffer.concat(body).toString();
-            
-            console.log("Request Body: " + body);
-            
-            var bodyArray = body.split("&");
-
-            var tweetText = bodyArray[1].split("=")[1].replace("+"," ");
-            var rawUser = bodyArray[0].split("=")[1].replace("+"," ");
-        
-            /*
-            res.write("<p>");
-            res.write("You wrote:");
-            res.write('"' + tweetText + '"');
-            res.write("</p>");
-            */
-            
-            var user = db.getUserByUsername(rawUser);
-
-            if (user === undefined) {
-
-                user = new User({name: "Shrey", username: rawUser});
-
-            }
-
-            var tweet = new Tweet({text: tweetText, authorId: user.id});
-            
-            db.insertUser(user);
-            db.insertTweet(tweet, user);
-
-            //self.index();
-        });
-        
+        readBody(req, res)
+            .then(body => {
+                let user = db.getUserByUsername(body.username);
+                if (typeof user === 'undefined') {
+                    user = new User({ name: body.name, username: body.username });
+                    db.insertUser(user);
+                }
+                const tweet = new Tweet({text: body.text, authorId: user.id});
+                db.insertTweet(tweet);
+                res.setHeader('Content-Type', 'application/json');
+                res.write(JSON.stringify(tweet));
+                return res.end();
+            });
     },
     readTweet: (req, res) => {
-        
-        console.log("Fetching tweets...");
-
-        var tweets = db.getTweets();
-        
-        console.log(JSON.stringify(tweets));
-        console.log(JSON.stringify(db.getUsers()));
-        
-        // replace with WebSocket or some form
-        // of communication with frontend
-        tweets.forEach(t => {
-
-            var user = db.getUserById(t.authorId);
-            
-            res.write("<p>");
-            res.write(user.username + ": ");
-            res.write(t.text);
-            res.write("</p>");
-            
-        });
-        
+        const { query } = url.parse(req.url, true);
+        if (typeof query.id === 'undefined') {
+            res.statusCode = 404;
+            res.write('Tweet not found');
+            return res.end();
+        }
+        const tweet = db.getTweetById(query.id);
+        if (typeof tweet === 'undefined') {
+            res.statusCode = 404;
+            res.write('Tweet not found');
+            return res.end();
+        }
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(tweet));
+        return res.end();
+    },
+    readTweets: (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        const tweets = db.getTweets();
+        const { query } = url.parse(req.url, true);
+        if (typeof query.after === 'undefined') {
+            res.write(JSON.stringify(tweets));
+            return res.end();
+        }
+        res.write(JSON.stringify(tweets.filter(t => t.created > query.after)));
+        return res.end();
     },
     likeTweet: (req, res) => {
-        
+        readBody(req, res)
+            .then((body) => {
+                const { tweetId, likerId } = body;
+                const like = new Like({ tweetId, likerId });
+                db.likeTweet(like);
+                res.end();
+            });
     },
     replyTweet: (req, res) => {
-        
-    }
+        readBody(req, res)
+            .then((body) => {
+                const { text, name, username, repliedTweetId } = body;
+                let user = db.getUserByUsername(body.username);
+                if (typeof user === 'undefined') {
+                    user = new User({ name: body.name, username: body.username });
+                    db.insertUser(user);
+                }
+                const reply = new Reply({
+                    text: body.text,
+                    authorId: user.id,
+                    repliedTweetId,
+                });
+                db.insertReply(reply);
+                res.setHeader('Content-Type', 'application/json');
+                res.write(JSON.stringify(reply));
+                return res.end();
+            })
+    },
+    getUser: (req, res) => {
+        const { query } = url.parse(req.url, true);
+        if (typeof query.id === 'undefined') {
+            res.statusCode = 404;
+            res.write('Tweet not found');
+            return res.end();
+        }
+        const user = db.getUserById(query.id);
+        if (typeof user === 'undefined') {
+            res.statusCode = 404;
+            res.write('User not found');
+            return res.end();
+        }
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(user));
+        return res.end();
+    },
+    getUsers: (req, res) => {
+        const users = db.getUsers();
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(users));
+        res.end();
+    },
+    notFound: (req, res) => {
+        res.statusCode = 404;
+        res.write('Page not found.');
+        return res.end();
+    },
 }
-
-module.exports = self;

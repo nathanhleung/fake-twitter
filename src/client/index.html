@@ -3,15 +3,21 @@
     <head>
         <title>Fake Twitter</title>
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     </head>
-    
     <body>
         <h1>Fake Twitter</h1>
         <h3>It's legit</h3>
-        <form action="" method="POST">
+        <form action="" method="POST" id="postTweet">
+            <input type="text" name="name" placeholder="Display Name" /><br>
             <input type="text" name="username" placeholder="Username" /><br>
             <textarea rows="4" cols="250" placeholder="What's happening?" name="text"></textarea><br>
             <input type="submit" value="Tweet" />
         </form>
+        
+        <div id="tweets"></div>
+        
+        <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+        <script type="text/javascript" src="index.js"></script>
     </body>
 </html>

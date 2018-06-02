@@ -8,29 +8,43 @@ const hostname = "0.0.0.0";
 const server = http.createServer((req, res) => {
     const { url, method }  = req;
     
-    switch (url) {
-        case '/': {
-            if (method === GET) {
-                routes.index(req, res);
-                routes.readTweet(req, res);
-                break;
-            } else if (method === POST) {
-                routes.postTweet(req, res);
-                routes.index(req, res);
-                routes.readTweet(req, res);
-                break;
-            }
+    if (method === GET) {
+        if (url === '/') {
+            return routes.index(req, res);
         }
-        default: {
-            res.statusCode = 404;
-            return res.end();
+        if (url === '/index.js') {
+            return routes.indexJS(req, res);
+        }
+        if (url === '/index.css') {
+            return routes.indexCSS(req, res);
+        }
+        if (url.indexOf('/api/tweets') === 0) {
+            return routes.readTweets(req, res);
+        }
+        if (url.indexOf('/api/tweet') === 0) {
+            return routes.readTweet(req, res);
+        }
+        if (url === 'api/users') {
+            return routes.getUsers(req, res);
+        }
+        if (url.indexOf('/api/user') === 0) {
+            return routes.getUser(req, res);
         }
     }
+    
+    if (method === POST) {
+        if (url === '/') {
+            return routes.postTweet(req, res);
+        }
+        if (url === '/api/like') {
+            return routes.likeTweet(req, res);
+        }
+    }
+    
+    return routes.notFound(req, res);
 });
 
 server.listen(PORT, hostname, () => {
-    
-   console.log("Server running"); 
-   
+    console.log(`Server running on port ${PORT}!`);
 });
 
