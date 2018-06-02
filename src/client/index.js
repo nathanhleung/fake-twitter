@@ -5,12 +5,17 @@ $(document).ready(() => {
    updateFeed();
    
    $("#postTweet").submit((e) => {
+      
       e.preventDefault();
       
       console.log("Posting tweet...");
       
-      $.post(url, { data }, (success) => {
-         
+      $.ajax({
+         url: "/",
+         method: "POST",
+         data: { name: $("#name").val(), username: $("#username").val(), text: $("#text").val() }
+      }).done(() => {
+         updateFeed();
       })
       
    });
@@ -22,11 +27,13 @@ function updateFeed() {
    console.log("Updating feed...");
    
    $.ajax({
-    url: "../api/tweets",
+    url: `../api/tweets`,
     dataType: "json",
    }).done((data) => {
       
       $("#tweets").empty();
+      
+      data.reverse();
       
       data.forEach(e => {
          $.ajax({
@@ -35,10 +42,10 @@ function updateFeed() {
          }).done((userData) => {
             
             $("#tweets").append(`
-            <div class="container-fluid">
-            <p>${userData.name} (@${userData.username})</p>
+            <li class="list-group-item">
+            <b>${userData.name} (@${userData.username})</b>
             <p>${e.text}</p>
-            </div>`);
+            </li>`);
             
          });
       });
