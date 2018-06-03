@@ -1,3 +1,5 @@
+var lastTweetTime = 0;
+
 $(document).ready(() => {
    
    console.log("Frontend init");
@@ -27,13 +29,12 @@ function updateFeed() {
    console.log("Updating feed...");
    
    $.ajax({
-    url: `../api/tweets`,
+    url: `../api/tweets?after=${lastTweetTime}`,
     dataType: "json",
    }).done((data) => {
       
-      $("#tweets").empty();
-      
-      data.reverse();
+      //$("#tweets").empty();
+      //data.reverse();
       
       data.forEach(e => {
          $.ajax({
@@ -41,11 +42,13 @@ function updateFeed() {
             dataType: "json"
          }).done((userData) => {
             
-            $("#tweets").append(`
+            $("#tweets").prepend(`
             <li class="list-group-item">
             <b>${userData.name} (@${userData.username})</b>
             <p>${e.text}</p>
             </li>`);
+
+            lastTweetTime = new Date().getTime();
             
          });
       });
